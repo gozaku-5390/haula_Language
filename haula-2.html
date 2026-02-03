@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>ハウラ語入力サンプル（フォント全面適用）</title>
+<style>
+  @font-face {
+    font-family: 'Haula';
+    src: url('haula.ttf') format('truetype'); /* 作った TTF フォントのパス */
+  }
+
+  body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; margin-top: 30px; }
+  
+  /* AもBもラベルもすべて自作フォントに */
+  #displayA, #displayB, .label { 
+    font-family: 'Haula', sans-serif; 
+    font-size: 24px; 
+    text-align: center;
+  }
+
+  #displayA, #displayB {
+    width: 300px; 
+    height: 50px; 
+    border: 1px solid black; 
+    margin: 10px; 
+    padding: 10px;
+  }
+
+  #joycon { 
+    width: 200px; 
+    height: 200px; 
+    background: lightgray; 
+    border-radius: 50%; 
+    position: relative; 
+    touch-action: none; 
+    margin-top: 20px;
+  }
+
+  #stick { 
+    width: 50px; 
+    height: 50px; 
+    background: darkgray; 
+    border-radius: 50%; 
+    position: absolute; 
+    left: 50%; 
+    top: 50%; 
+    transform: translate(-50%, -50%); 
+  }
+
+  .label { 
+    position: absolute; 
+    font-weight: bold; 
+    background: rgba(255,255,255,0.8); 
+    padding: 2px 5px; 
+    border-radius: 3px; 
+    pointer-events: none; 
+  }
+
+  .up { top: 5px; left: 50%; transform: translateX(-50%); }
+  .down { bottom: 5px; left: 50%; transform: translateX(-50%); }
+  .left { left: 5px; top: 50%; transform: translateY(-50%); }
+  .right { right: 5px; top: 50%; transform: translateY(-50%); }
+
+  .highlight { background: yellow; }
+</style>
+</head>
+<body>
+
+<h2>A: 作業中</h2>
+<div id="displayA"></div>
+
+<h2>B: 完成文字（フォント適用）</h2>
+<div id="displayB"></div>
+
+<h2>Joy-Con 風スティック</h2>
+<div id="joycon">
+  <div id="stick"></div>
+  <div class="label up" id="labelUp">U</div>
+  <div class="label down" id="labelDown">D</div>
+  <div class="label left" id="labelLeft">L</div>
+  <div class="label right" id="labelRight">R</div>
+</div>
+
+<script>
+const displayA = document.getElementById('displayA');
+const displayB = document.getElementById('displayB');
+const stick = document.getElementById('stick');
+const joycon = document.getElementById('joycon');
+const labels = {
+  up: document.getElementById('labelUp'),
+  down: document.getElementById('labelDown'),
+  left: document.getElementById('labelLeft'),
+  right: document.getElementById('labelRight')
+};
+
+let stage = 0; 
+let tempInput = [];
+
+// 入力 → ハウラ文字対応テーブル
+const table = {
+'f,i,m':'"', 'f,j,m':"'", 'f,k,m':',', 'f,l,m':':',
+'g,i,m':'H', 'g,j,m':'I', 'g,k,m':'J', 'g,l,m':'K',
+'h,i,m':'T', 'h,j,m':'U', 'h,k,m':'V', 'h,l,m':'W',
+'f,i,n':';', 'f,j,n':'A', 'f,k,n':'B', 'f,l,n':'C',
+'g,i,n':'L', 'g,j,n':'M', 'g,k,n':'N', 'g,l,n':'O',
+'h,i,n':'X', 'h,j,n':'Y', 'h,k,n':'Z', 'h,l,n':'a',
+'f,i,o':'D', 'f,j,o':'E', 'f,k,o':'F', 'f,l,o':'G',
+'g,i,o':'P', 'g,j,o':'Q', 'g,k,o':'R', 'g,l,o':'S',
+'h,i,o':'b', 'h,j,o':'c', 'h,k,o':'d', 'h,l,o':'e'
+};
+
+// ステージごとのラベル選択肢
+const options = [
+  { up:'h', down:null, left:'f', right:'g' },
+  { up:'i', down:'j', left:'k', right:'l' },
+  { up:'n', down:null, left:'m', right:'o' }
+];
+
+let origin = {x:0, y:0};
+let dragging = false;
+
+stick.addEventListener('pointerdown', e => {
+  dragging = true;
+  origin.x = e.clientX;
+  origin.y = e.clientY;
+});
+
+document.addEventListener('pointermove', e => {
+  if(!dragging) return;
+  let dx = e.clientX - origin.x;
+  let dy = e.clientY - origin.y;
+  stick.style.transform = `translate(${dx}px, ${dy}px) translate(-50%, -50%)`;
+
+  let absX = Math.abs(dx);
+  let absY = Math.abs(dy);
+  let dir = null;
+  if(Math.max(absX, absY) < 20) dir = null;
+  else if(absX > absY) dir = dx>0?'right':'left';
+  else dir = dy>0?'down':'up';
+
+  ['up','down','left','right'].forEach(d=>labels[d].classList.remove('highlight'));
+  if(dir && options[stage][dir]) labels[dir].classList.add('highlight');
+});
+
+document.addEventListener('pointerup', e => {
+  if(!dragging) return;
+  dragging = false;
+  stick.style.transform = `translate(-50%, -50%)`;
+
+  let dx = e.clientX - origin.x;
+  let dy = e.clientY - origin.y;
+  let absX = Math.abs(dx);
+  let absY = Math.abs(dy);
+  let dir = null;
+  if(Math.max(absX, absY) < 20) dir = null;
+  else if(absX > absY) dir = dx>0?'right':'left';
+  else dir = dy>0?'down':'up';
+
+  if(dir && options[stage][dir]){
+    tempInput.push(options[stage][dir]);
+    displayA.textContent = tempInput.join(''); // Aに途中入力
+    stage++;
+    if(stage>2){
+      let key = tempInput.join(',');
+      displayB.textContent += table[key] || '?'; // Bに完成文字
+      tempInput = [];
+      stage = 0;
+    }
+    ['up','down','left','right'].forEach(d=>labels[d].classList.remove('highlight'));
+  }
+
+  const current = options[stage];
+  labels.up.textContent = current.up || '';
+  labels.down.textContent = current.down || '';
+  labels.left.textContent = current.left || '';
+  labels.right.textContent = current.right || '';
+});
+
+const current = options[stage];
+labels.up.textContent = current.up || '';
+labels.down.textContent = current.down || '';
+labels.left.textContent = current.left || '';
+labels.right.textContent = current.right || '';
+</script>
+</body>
+</html>
