@@ -96,7 +96,7 @@ function punctCycle() {
   const char = puncts[punctIndex];
   punctIndex = (punctIndex + 1) % puncts.length;
 
-  // 最後の文字を取得
+  // 最後の文字を取得する
   const lastChar = output.textContent.slice(-1);
 
   if (puncts.includes(lastChar)) {
